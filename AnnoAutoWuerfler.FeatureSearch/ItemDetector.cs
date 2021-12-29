@@ -11,10 +11,12 @@ using System.Threading.Tasks;
 
 namespace AnnoAutoWuerfler.FeatureSearch
 {
-    public class ItemDetector
+    public class ItemDetector : IDisposable
     {
         private const float THRESHOLD = 0.8f;
         public IList<FileInfo> Templates { get; }
+        // Track whether Dispose has been called.
+        private bool disposed = false;
 
 
         public ItemDetector(IList<FileInfo> templates)
@@ -31,10 +33,10 @@ namespace AnnoAutoWuerfler.FeatureSearch
         /// <param name="source">The input image to check for matches to the Templates</param>
         /// <param name="debugMode">Enables saving of the matching results after processing</param>
         /// <returns></returns>
-        public (int, int) DetectMatches(Bitmap source, bool debugMode = false)
+        public (bool, int, int) DetectMatches(Bitmap source, bool debugMode = false)
         {
             using (Mat matSrc = source.ToMat())
-            using (Mat matTo = new Mat(Templates.First().FullName, ImreadModes.Grayscale))
+            using (Mat matTo = new Mat(Templates.First().FullName))
             using (Mat matSrcRet = new Mat())
             using (Mat matToRet = new Mat())
             {
@@ -64,8 +66,12 @@ namespace AnnoAutoWuerfler.FeatureSearch
                             minDistance = distance;
                         }
                     }
-                    Console.WriteLine($"max distance : {maxDistance}");
-                    Console.WriteLine($"min distance : {minDistance}");
+
+                    if (debugMode)
+                    {
+                        Console.WriteLine($"max distance : {maxDistance}");
+                        Console.WriteLine($"min distance : {minDistance}");
+                    }
 
                     var pointsSrc = new List<Point2f>();
                     var pointsDst = new List<Point2f>();
@@ -83,6 +89,11 @@ namespace AnnoAutoWuerfler.FeatureSearch
                         }
                     }
 
+                    if (!goodMatches.Any(m => m.Distance < 0.17d))
+                    {
+                        return (false, 0, 0);
+                    }
+
                     var outMat = new Mat();
 
                     // algorithm RANSAC Filter the matched results
@@ -93,7 +104,7 @@ namespace AnnoAutoWuerfler.FeatureSearch
                         var pDst = pointsDst.ConvertAll(Point2fToPoint2d);
                         var outMask = new Mat();
                         // If the original matching result is null, Skip the filtering step
-                        if (pSrc.Count > 0 && pDst.Count > 0)
+                        if (pSrc.Count > 4 && pDst.Count > 4)
                             Cv2.FindHomography(pSrc, pDst, HomographyMethods.Ransac, mask: outMask);
                         // If passed RANSAC After processing, the matching points are more than 10.,Only filters are used. Otherwise, use the original matching point result(When the matching point is too small, it passes through RANSAC After treatment,It's possible to get the result of 0 matching points.).
                         if (outMask.Rows > 10)
@@ -112,7 +123,7 @@ namespace AnnoAutoWuerfler.FeatureSearch
                         bitmap.Save(Path.Combine(outputDirectory, $"Match_{DateTime.Now.Ticks}.bmp"));
 
                     }
-                    return ((int)Math.Round(pSrc.Select(p => p.X).Average(), 0), (int)Math.Round(pSrc.Select(p => p.Y).Average(), 0));
+                    return (true, (int)Math.Round(pSrc.Select(p => p.X).Average(), 0), (int)Math.Round(pSrc.Select(p => p.Y).Average(), 0));
                 }
             }
         }
@@ -120,6 +131,64 @@ namespace AnnoAutoWuerfler.FeatureSearch
         private static Point2d Point2fToPoint2d(Point2f pf) => new Point2d(((int)pf.X), ((int)pf.Y));
 
 
+        #region Disposable
 
+        public void Dispose()
+        {
+            Dispose(disposing: true);
+            // This object will be cleaned up by the Dispose method.
+            // Therefore, you should call GC.SuppressFinalize to
+            // take this object off the finalization queue
+            // and prevent finalization code for this object
+            // from executing a second time.
+            GC.SuppressFinalize(this);
+        }
+
+        // Dispose(bool disposing) executes in two distinct scenarios.
+        // If disposing equals true, the method has been called directly
+        // or indirectly by a user's code. Managed and unmanaged resources
+        // can be disposed.
+        // If disposing equals false, the method has been called by the
+        // runtime from inside the finalizer and you should not reference
+        // other objects. Only unmanaged resources can be disposed.
+        protected virtual void Dispose(bool disposing)
+        {
+            // Check to see if Dispose has already been called.
+            if (!this.disposed)
+            {
+                // If disposing equals true, dispose all managed
+                // and unmanaged resources.
+                if (disposing)
+                {
+                    // Dispose managed resources.
+
+                }
+
+                // Note disposing has been done.
+                disposed = true;
+            }
+        }
+
+        // Use interop to call the method necessary
+        // to clean up the unmanaged resource.
+        [System.Runtime.InteropServices.DllImport("Kernel32")]
+        private extern static Boolean CloseHandle(IntPtr handle);
+
+        // Use C# finalizer syntax for finalization code.
+        // This finalizer will run only if the Dispose method
+        // does not get called.
+        // It gives your base class the opportunity to finalize.
+        // Do not provide finalizer in types derived from this class.
+        ~ItemDetector()
+        {
+            // Do not re-create Dispose clean-up code here.
+            // Calling Dispose(disposing: false) is optimal in terms of
+            // readability and maintainability.
+            Dispose(disposing: false);
+        }
+
+
+
+        #endregion
     }
 }
