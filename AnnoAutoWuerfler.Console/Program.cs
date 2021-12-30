@@ -61,10 +61,20 @@ namespace AnnoAutoWuerfler.ConsoleApp
         {
             using (var kadjahDetector = new ItemDetector(new List<FileInfo> { new FileInfo(Path.Combine(ResourceDirectoy, "Kadjah.png")) }))
             using (var garrickDetector = new ItemDetector(new List<FileInfo> { new FileInfo(Path.Combine(ResourceDirectoy, "Garrick.png")) }))
-            using (var LivkovskyDetector = new ItemDetector(new List<FileInfo> { new FileInfo(Path.Combine(ResourceDirectoy, "Livkovsky.png")) }))
+            using (var livkovskyDetector = new ItemDetector(new List<FileInfo> { new FileInfo(Path.Combine(ResourceDirectoy, "Livkovsky.png")) }))
             using (var kerasDetector = new ItemDetector(new List<FileInfo> { new FileInfo(Path.Combine(ResourceDirectoy, "Keras.png")) }))
+            using (var hermannDetector = new ItemDetector(new List<FileInfo> { new FileInfo(Path.Combine(ResourceDirectoy, "Hermann.png")) }))
+            using (var sappeurDetector = new ItemDetector(new List<FileInfo> { new FileInfo(Path.Combine(ResourceDirectoy, "Sappeur.png")) }))
             {
-                var itemDetectors = new List<ItemDetector> { kerasDetector, kadjahDetector, garrickDetector, LivkovskyDetector };
+                var itemDetectors = new List<ItemDetector> {
+                    //hermannDetector,
+                    kerasDetector,
+                    //kadjahDetector,
+                    garrickDetector,
+                    livkovskyDetector,
+                    sappeurDetector,
+                    };
+
 
                 int i = 0;
                 while (i < 6)
